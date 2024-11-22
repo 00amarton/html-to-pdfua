@@ -1,1 +1,13 @@
+{
+  "name": "html-to-pdfua",
+  "version": "1.0.0",
+  "description": "Convertitore HTML to PDF/UA",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "puppeteer": "^19.0.0"
+  }
+}
 
