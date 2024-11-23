@@ -10,9 +10,8 @@
     "jsdom": "^16.5.0",
     "pdfkit": "^0.13.0",
     "axe-core": "^4.7.0",
-    "verapdf-validator": "^1.0.0",
-    "pdf-lib": "^1.17.1",
-    "structured-clone": "^0.3.1",
-    "tag-html": "^1.2.1"
+    "pdf-accessibility": "^1.2.0",
+    "html-to-pdfmake": "^2.4.25",
+    "pdfmake": "^0.2.7"
   }
 }
