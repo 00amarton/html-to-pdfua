@@ -2,53 +2,23 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <title>HTML to PDF/UA Validator</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTML to PDF/UA Converter</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <h1>Validatore HTML to PDF/UA</h1>
-    
     <div class="container">
-        <div class="editor-section">
-            <h2>HTML Input</h2>
-            <textarea 
-                id="htmlInput" 
-                placeholder="Inserisci il codice HTML da validare..."
-                spellcheck="false"
-            ></textarea>
-            
-            <div class="buttons">
-                <button onclick="validateHTML()" class="validate-btn">
-                    Valida Matterhorn Protocol
-                </button>
-                <button onclick="convertToPDF()" class="convert-btn" id="convertBtn" disabled>
-                    Converti in PDF/UA
-                </button>
-            </div>
-        </div>
+        <h1>Convertilo in PDF/UA</h1>
 
-        <div class="validation-section">
-            <h2>Risultati Validazione</h2>
-            <div id="summary" class="summary" style="display: none;">
-                <div class="summary-item">
-                    <span>Totale checkpoint:</span>
-                    <strong id="totalChecks">0</strong>
-                </div>
-                <div class="summary-item">
-                    <span>Passati:</span>
-                    <strong id="passedChecks">0</strong>
-                </div>
-                <div class="summary-item">
-                    <span>Falliti:</span>
-                    <strong id="failedChecks">0</strong>
-                </div>
-            </div>
-            <div id="validationResults" class="validation-results"></div>
-        </div>
-    </div>
+        <!-- Sezione di inserimento HTML -->
+        <textarea id="htmlInput" placeholder="Inserisci il codice HTML qui"></textarea><br>
+        <button onclick="validateHTML()">Valida HTML</button>
 
-    <div id="loading" class="loading" style="display: none;">
-        Elaborazione in corso...
+        <!-- Sezione per i suggerimenti -->
+        <div id="suggestions" class="suggestions"></div>
+
+        <!-- Sezione per il download PDF -->
+        <button id="downloadBtn" onclick="generatePDF()" disabled>Genera PDF/UA</button>
     </div>
 
     <script src="script.js"></script>
