@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>Convertitore HTML in PDF/UA</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Convertitore HTML in PDF/UA Accessibile</h1>
+        
+        <div class="editor-container">
+            <textarea id="htmlInput" placeholder="Inserisci il tuo HTML qui..."></textarea>
+        </div>
+
+        <div class="button-container">
+            <button onclick="convertToPDF()" class="convert-btn">Converti in PDF/UA</button>
+            <button onclick="validateHTML()" class="validate-btn">Valida HTML</button>
+        </div>
+
+        <div id="status" class="status"></div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
