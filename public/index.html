@@ -2,24 +2,55 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <title>Convertitore HTML in PDF/UA</title>
+    <title>HTML to PDF/UA Validator</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <h1>Validatore HTML to PDF/UA</h1>
+    
     <div class="container">
-        <h1>Convertitore HTML in PDF/UA Accessibile</h1>
-        
-        <div class="editor-container">
-            <textarea id="htmlInput" placeholder="Inserisci il tuo HTML qui..."></textarea>
+        <div class="editor-section">
+            <h2>HTML Input</h2>
+            <textarea 
+                id="htmlInput" 
+                placeholder="Inserisci il codice HTML da validare..."
+                spellcheck="false"
+            ></textarea>
+            
+            <div class="buttons">
+                <button onclick="validateHTML()" class="validate-btn">
+                    Valida Matterhorn Protocol
+                </button>
+                <button onclick="convertToPDF()" class="convert-btn" id="convertBtn" disabled>
+                    Converti in PDF/UA
+                </button>
+            </div>
         </div>
 
-        <div class="button-container">
-            <button onclick="convertToPDF()" class="convert-btn">Converti in PDF/UA</button>
-            <button onclick="validateHTML()" class="validate-btn">Valida HTML</button>
+        <div class="validation-section">
+            <h2>Risultati Validazione</h2>
+            <div id="summary" class="summary" style="display: none;">
+                <div class="summary-item">
+                    <span>Totale checkpoint:</span>
+                    <strong id="totalChecks">0</strong>
+                </div>
+                <div class="summary-item">
+                    <span>Passati:</span>
+                    <strong id="passedChecks">0</strong>
+                </div>
+                <div class="summary-item">
+                    <span>Falliti:</span>
+                    <strong id="failedChecks">0</strong>
+                </div>
+            </div>
+            <div id="validationResults" class="validation-results"></div>
         </div>
-
-        <div id="status" class="status"></div>
     </div>
+
+    <div id="loading" class="loading" style="display: none;">
+        Elaborazione in corso...
+    </div>
+
     <script src="script.js"></script>
 </body>
 </html>
