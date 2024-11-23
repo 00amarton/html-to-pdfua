@@ -7,10 +7,12 @@ const app = express();
 
 // Middleware
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+app.use('/', express.static(path.join(__dirname, 'public')));
 
 // Rotta principale
-app.get('/', (req, res) => {
+app.get('/', function(req, res) {
+    console.log('Directory corrente:', __dirname);
+    console.log('Percorso file:', path.join(__dirname, 'public', 'index.html'));
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
@@ -43,9 +45,13 @@ app.post('/convert', async (req, res) => {
         doc.end();
 
     } catch (error) {
+        console.error('Errore durante la conversione:', error);
         res.status(500).json({ error: error.message });
     }
 });
 
 const port = process.env.PORT || 3000;
-app.listen(port, () => console.log(`Server running on port ${port}`));
+app.listen(port, () => {
+    console.log(`Server running on port ${port}`);
+    console.log('Directory di lavoro:', process.cwd());
+});
