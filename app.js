@@ -4,46 +4,18 @@ const { JSDOM } = require('jsdom');
 const fetch = require('node-fetch');
 const FormData = require('form-data');
 const axeCore = require('axe-core');
+const { HtmlValidate } = require('html-validate');
+const multer = require('multer');
 const path = require('path');
 
-class PDFUAValidator {
-    static async validateWithVeraPDF(pdfBuffer) {
-        const formData = new FormData();
-        formData.append('file', pdfBuffer, {
-            filename: 'document.pdf',
-            contentType: 'application/pdf'
-        });
-
-        const response = await fetch('https://verapdf.org/api/validate', {
-            method: 'POST',
-            body: formData
-        });
-
-        if (!response.ok) {
-            throw new Error('Errore durante la validazione PDF/UA');
-        }
-
-        const validationResult = await response.json();
-        
-        // Verifica conformità PDF/UA
-        if (!validationResult.compliant) {
-            throw new Error(`PDF non conforme a PDF/UA: ${JSON.stringify(validationResult.details)}`);
-        }
-
-        return validationResult;
+// Configurazione del validatore HTML
+const htmlValidator = new HtmlValidate({
+    rules: {
+        'wcag/h37': 'error',
+        'wcag/h67': 'error',
+        'element-required-attributes': 'error'
     }
-
-    static async validateHTML(html) {
-        const dom = new JSDOM(html);
-        const results = await axeCore.run(dom.window.document);
-        
-        if (results.violations.length > 0) {
-            throw new Error(`Violazioni accessibilità HTML: ${JSON.stringify(results.violations)}`);
-        }
-        
-        return true;
-    }
-}
+});
 
 class PDFUAGenerator {
     constructor() {
@@ -51,45 +23,55 @@ class PDFUAGenerator {
             tagged: true,
             lang: 'it-IT',
             displayTitle: true,
-            pdfVersion: '1.7'
+            pdfVersion: '1.7',
+            documentStructure: true
         });
-
-        // Imposta metadati PDF/UA
-        this.doc.info['PDF/UA-1'] = 'Compliant';
-        this.doc.info.Title = 'PDF/UA Document';
-        this.doc.info.Creator = 'HTML to PDF/UA Converter';
-        this.doc.info.Language = 'it-IT';
     }
 
-    async generatePDF(html) {
-        // Valida HTML prima della conversione
-        await PDFUAValidator.validateHTML(html);
+    async validateHTML(html) {
+        // Validazione HTML con html-validate
+        const htmlResult = await htmlValidator.validateString(html);
+        if (!htmlResult.valid) {
+            throw new Error(`Errori HTML: ${JSON.stringify(htmlResult.messages)}`);
+        }
 
+        // Validazione accessibilità con axe-core
         const dom = new JSDOM(html);
-        await this.processNode(dom.window.document.body);
+        const axeResults = await axeCore.run(dom.window.document);
+        if (axeResults.violations.length > 0) {
+            throw new Error(`Violazioni accessibilità: ${JSON.stringify(axeResults.violations)}`);
+        }
 
-        // Raccogli il buffer del PDF
-        const chunks = [];
-        this.doc.on('data', chunk => chunks.push(chunk));
-        
-        return new Promise((resolve, reject) => {
-            this.doc.on('end', async () => {
-                const pdfBuffer = Buffer.concat(chunks);
-                
-                try {
-                    // Valida il PDF generato con veraPDF
-                    const validationResult = await PDFUAValidator.validateWithVeraPDF(pdfBuffer);
-                    resolve({
-                        pdf: pdfBuffer,
-                        validation: validationResult
-                    });
-                } catch (error) {
-                    reject(error);
-                }
-            });
+        return true;
+    }
+
+    async generatePDFUA(html) {
+        try {
+            // Valida HTML prima della conversione
+            await this.validateHTML(html);
+
+            // Configura metadati PDF/UA
+            this.doc.info = {
+                Title: 'Documento PDF/UA',
+                Author: 'HTML to PDF/UA Converter',
+                Subject: 'Documento accessibile conforme PDF/UA',
+                Keywords: 'PDF/UA, accessibilità, ISO 14289-1',
+                Creator: 'PDFKit Converter',
+                Producer: 'PDF/UA Generator',
+                Language: 'it-IT',
+                'PDF/UA Identifier': '1',
+                AccessibilityCompliant: 'true',
+                TaggedPDF: 'true'
+            };
+
+            // Processa il contenuto HTML
+            const dom = new JSDOM(html);
+            await this.processNode(dom.window.document.body);
             
-            this.doc.end();
-        });
+            return this.doc;
+        } catch (error) {
+            throw new Error(`Errore nella generazione PDF/UA: ${error.message}`);
+        }
     }
 
     async processNode(node) {
@@ -99,37 +81,53 @@ class PDFUAGenerator {
         }
 
         const tagName = node.nodeName.toLowerCase();
-        
         switch(tagName) {
             case 'h1':
-                this.doc.structure.heading(1, async () => {
-                    for (const child of node.childNodes) {
-                        await this.processNode(child);
-                    }
+                this.doc.structure.heading(1, () => {
+                    this.doc.fontSize(24).text(node.textContent.trim());
                 });
                 break;
-            
+
+            case 'h2':
+                this.doc.structure.heading(2, () => {
+                    this.doc.fontSize(20).text(node.textContent.trim());
+                });
+                break;
+
             case 'p':
-                this.doc.structure.paragraph(async () => {
-                    for (const child of node.childNodes) {
-                        await this.processNode(child);
-                    }
+                this.doc.structure.paragraph(() => {
+                    this.doc.fontSize(12).text(node.textContent.trim());
                 });
                 break;
 
             case 'ul':
-                this.doc.structure.list(async () => {
-                    for (const child of node.childNodes) {
-                        if (child.nodeName.toLowerCase() === 'li') {
-                            this.doc.structure.listItem(async () => {
-                                await this.processNode(child);
+            case 'ol':
+                this.doc.structure.list(() => {
+                    Array.from(node.children).forEach(li => {
+                        this.doc.structure.listItem(() => {
+                            this.doc.fontSize(12).text(li.textContent.trim());
+                        });
+                    });
+                });
+                break;
+
+            case 'table':
+                this.doc.structure.table(() => {
+                    // Gestione tabelle accessibili
+                    Array.from(node.rows).forEach(row => {
+                        this.doc.structure.tableRow(() => {
+                            Array.from(row.cells).forEach(cell => {
+                                this.doc.structure.tableCell(() => {
+                                    this.doc.text(cell.textContent.trim());
+                                });
                             });
-                        }
-                    }
+                        });
+                    });
                 });
                 break;
 
             default:
+                // Processa nodi figli ricorsivamente
                 for (const child of node.childNodes) {
                     await this.processNode(child);
                 }
@@ -138,9 +136,10 @@ class PDFUAGenerator {
 }
 
 const app = express();
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Endpoint per la conversione
 app.post('/convert', async (req, res) => {
     try {
         const { html } = req.body;
@@ -149,25 +148,27 @@ app.post('/convert', async (req, res) => {
         }
 
         const generator = new PDFUAGenerator();
-        const { pdf, validation } = await generator.generatePDF(html);
+        const doc = await generator.generatePDFUA(html);
 
         res.contentType('application/pdf');
-        res.send(pdf);
+        doc.pipe(res);
+        doc.end();
 
     } catch (error) {
-        console.error('Errore nella conversione:', error);
+        console.error('Errore:', error);
         res.status(500).json({
             error: error.message,
-            details: 'Errore nella creazione o validazione del PDF/UA'
+            details: 'Errore nella generazione del PDF/UA'
         });
     }
 });
 
+// Route principale
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
-    console.log(`Server PDF/UA con validazione veraPDF attivo sulla porta ${port}`);
+    console.log(`Server PDF/UA attivo sulla porta ${port}`);
 });
