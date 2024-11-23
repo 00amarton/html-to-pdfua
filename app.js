@@ -14,6 +14,36 @@ const app = express();
 app.use(express.json({ limit: '50mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Funzione di validazione HTML con suggerimenti
+function validateHTML(html) {
+    const { JSDOM } = require('jsdom');
+    const dom = new JSDOM(html);
+    const document = dom.window.document;
+    const suggestions = [];
+
+    // Controllo lingua nel tag <html>
+    if (!document.documentElement.hasAttribute('lang')) {
+        suggestions.push({
+            message: 'Specifica la lingua del documento nel tag <html> (es. <html lang="it">).'
+        });
+    }
+
+    // Controllo immagini senza attributo alt
+    const images = document.querySelectorAll('img');
+    images.forEach((img, index) => {
+        if (!img.hasAttribute('alt')) {
+            suggestions.push({
+                message: `L'immagine ${index + 1} manca dell'attributo 'alt'.`
+            });
+        }
+    });
+
+    return {
+        isValid: suggestions.length === 0,
+        suggestions
+    };
+}
+
 class PDFUAGenerator {
     constructor() {
         this.doc = new PDFDocument({
@@ -82,6 +112,23 @@ class PDFUAGenerator {
         }
     }
 }
+
+// Endpoint di validazione HTML con suggerimenti
+app.post('/validate', (req, res) => {
+    try {
+        const { html } = req.body;
+        if (!html) throw new Error('HTML non fornito.');
+
+        const validationResults = validateHTML(html);
+        res.json(validationResults);
+
+    } catch (error) {
+        res.status(500).json({ 
+            error: error.message,
+            details: 'Errore durante la validazione HTML'
+        });
+    }
+});
 
 app.post('/convert', async (req, res) => {
     try {
