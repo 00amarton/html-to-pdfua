@@ -1,8 +1,7 @@
 const express = require('express');
-const PDFDocument = require('pdfkit-ua');
+const PDFDocument = require('pdfkit');
 const { JSDOM } = require('jsdom');
 const path = require('path');
-const fs = require('fs');
 
 const app = express();
 
@@ -11,78 +10,39 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 async function createAccessiblePDF(html) {
     const doc = new PDFDocument({
-        pdfVersion: '1.7',
         tagged: true,
         lang: 'it-IT',
-        displayTitle: true,
-        documentStructure: true
+        displayTitle: true
     });
 
-    // Metadati PDF/UA
-    doc.setMetadata({
-        'dc:title': 'Documento PDF/UA',
-        'dc:creator': 'HTML to PDF/UA Converter',
-        'dc:language': 'it-IT',
-        'pdf:producer': 'PDFKit-UA',
-        'pdf:trapped': 'Unknown',
-        'xmp:createDate': new Date().toISOString(),
-        'pdfua': '1',
-        'pdfuaVersion': '1',
-        'accessibilityCompliant': true
-    });
+    // Imposta metadati per accessibilità
+    doc.info.Title = 'Documento Accessibile';
+    doc.info.Author = 'HTML to PDF Converter';
+    doc.info.Subject = 'Documento PDF accessibile';
+    doc.info.Keywords = 'accessibile, pdf, converter';
+    doc.info.Creator = 'PDF Converter';
+    doc.info.Producer = 'PDFKit';
 
-    // Inizia la struttura del documento
-    doc.structure.document(() => {
-        // Aggiunge informazioni di conformità PDF/UA
-        doc.structure.documentFragment(() => {
-            doc.structure.heading1(() => {
-                doc.structure.span('Documento PDF/UA Accessibile');
-            });
-
-            // Processa l'HTML e mantiene la struttura
-            const dom = new JSDOM(html);
-            processNode(dom.window.document.body, doc);
-        });
-    });
+    // Processa HTML
+    const dom = new JSDOM(html);
+    const content = processContent(dom.window.document.body);
+    doc.text(content);
 
     return doc;
 }
 
-function processNode(node, doc) {
-    switch(node.nodeName.toLowerCase()) {
-        case 'h1':
-            doc.structure.heading1(() => {
-                doc.text(node.textContent);
-            });
-            break;
-        case 'h2':
-            doc.structure.heading2(() => {
-                doc.text(node.textContent);
-            });
-            break;
-        case 'p':
-            doc.structure.paragraph(() => {
-                doc.text(node.textContent);
-            });
-            break;
-        case 'ul':
-            doc.structure.list(() => {
-                Array.from(node.children).forEach(li => {
-                    doc.structure.listItem(() => {
-                        doc.text(li.textContent);
-                    });
-                });
-            });
-            break;
-        default:
-            if (node.children) {
-                Array.from(node.children).forEach(child => processNode(child, doc));
-            } else if (node.textContent.trim()) {
-                doc.structure.span(() => {
-                    doc.text(node.textContent.trim());
-                });
-            }
+function processContent(node) {
+    let content = '';
+    
+    if (node.nodeType === 3) { // Text node
+        return node.textContent.trim();
     }
+
+    for (let child of node.childNodes) {
+        content += processContent(child) + ' ';
+    }
+
+    return content.trim();
 }
 
 app.post('/convert', async (req, res) => {
@@ -102,8 +62,7 @@ app.post('/convert', async (req, res) => {
     } catch (error) {
         console.error('Errore durante la conversione:', error);
         res.status(500).json({ 
-            error: error.message,
-            details: 'Errore nella creazione del PDF/UA'
+            error: error.message
         });
     }
 });
