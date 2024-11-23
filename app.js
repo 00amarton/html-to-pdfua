@@ -1,5 +1,6 @@
 const express = require('express');
-const PDFDocument = require('pdfkit');
+const pdfMake = require('pdfmake');
+const htmlToPdfMake = require('html-to-pdfmake');
 const { JSDOM } = require('jsdom');
 const axeCore = require('axe-core');
 const path = require('path');
@@ -8,96 +9,71 @@ const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-class PDFUAGenerator {
+class PDFUAConverter {
     constructor() {
-        this.doc = new PDFDocument({
-            tagged: true,
-            lang: 'it-IT',
-            displayTitle: true,
-            pdfVersion: '1.7'
-        });
-        this.setupPDFUA();
-    }
-
-    setupPDFUA() {
-        // Metadati PDF/UA obbligatori
-        this.doc.info = {
-            Title: 'Documento PDF/UA',
-            Author: 'HTML to PDF/UA Converter',
-            Subject: 'Documento PDF/UA accessibile',
-            Keywords: 'PDF/UA, accessibilità, WCAG 2.1',
-            Creator: 'PDF/UA Converter',
-            Producer: 'PDFKit con estensioni UA',
-            Trapped: '/Unknown',
-            'PDF/UA Identifier': '1',
-            'PDF/UA Conformance': 'Purpose = Accessibility, Conformance = UA1'
+        // Configurazione fonts per pdfmake
+        const fonts = {
+            Roboto: {
+                normal: 'node_modules/pdfmake/fonts/Roboto/Roboto-Regular.ttf',
+                bold: 'node_modules/pdfmake/fonts/Roboto/Roboto-Medium.ttf',
+                italics: 'node_modules/pdfmake/fonts/Roboto/Roboto-Italic.ttf',
+                bolditalics: 'node_modules/pdfmake/fonts/Roboto/Roboto-MediumItalic.ttf'
+            }
         };
-
-        // Impostazioni di accessibilità
-        this.doc.catalog.lang = 'it-IT';
-        this.doc.catalog.pageLayout = 'OneColumn';
-        this.doc.catalog.pageMode = 'UseOutlines';
+        
+        this.printer = new pdfMake(fonts);
     }
 
     async validateHTML(html) {
         const dom = new JSDOM(html);
-        const results = await axeCore.run(dom.window.document);
-        return results.violations.length === 0;
+        const document = dom.window.document;
+        
+        // Esegui validazione accessibilità
+        const results = await axeCore.run(document);
+        if (results.violations.length > 0) {
+            console.log('Problemi di accessibilità trovati:', results.violations);
+            throw new Error('Il documento non rispetta gli standard di accessibilità');
+        }
+        return true;
     }
 
-    processNode(node, parentTag = 'P') {
-        if (node.nodeType === 3) { // Text node
-            return node.textContent.trim();
+    async convertToPDFUA(html) {
+        try {
+            // Valida HTML
+            await this.validateHTML(html);
+
+            // Converti HTML in formato pdfmake
+            const window = new JSDOM('').window;
+            const documentDefinition = htmlToPdfMake(html, {window});
+
+            // Aggiungi metadati PDF/UA
+            documentDefinition.info = {
+                title: 'Documento PDF/UA Accessibile',
+                author: 'HTML to PDF/UA Converter',
+                subject: 'PDF/UA accessibile',
+                keywords: 'PDF/UA, accessibilità, WCAG 2.1',
+                producer: 'PDFMake con supporto UA',
+                accessibility: true,
+                tagged: true,
+                lang: 'it-IT',
+                pdfUA: '1',
+            };
+
+            // Applica stili per accessibilità
+            documentDefinition.defaultStyle = {
+                font: 'Roboto',
+                fontSize: 12,
+                lineHeight: 1.5
+            };
+
+            // Crea PDF
+            const pdfDoc = this.printer.createPdfKitDocument(documentDefinition);
+            return pdfDoc;
+
+        } catch (error) {
+            console.error('Errore nella conversione:', error);
+            throw error;
         }
-
-        let content = '';
-        const nodeName = node.nodeName.toLowerCase();
-
-        // Mappa tag HTML a struttura PDF/UA
-        const tagMap = {
-            'h1': 'H1',
-            'h2': 'H2',
-            'h3': 'H3',
-            'p': 'P',
-            'ul': 'L',
-            'li': 'LI',
-            'a': 'Link',
-            'strong': 'Strong',
-            'em': 'Em'
-        };
-
-        const tag = tagMap[nodeName] || parentTag;
-
-        // Gestione speciale per liste e elementi di lista
-        if (nodeName === 'ul' || nodeName === 'ol') {
-            this.doc.structure.list(() => {
-                Array.from(node.children).forEach(li => {
-                    this.doc.structure.listItem(() => {
-                        this.processNode(li, 'LI');
-                    });
-                });
-            });
-        } else {
-            // Gestione generale altri elementi
-            for (let child of node.childNodes) {
-                content += this.processNode(child, tag) + ' ';
-            }
-        }
-
-        return content.trim();
-    }
-
-    async generatePDF(html) {
-        if (!await this.validateHTML(html)) {
-            throw new Error('HTML non conforme agli standard di accessibilità');
-        }
-
-        const dom = new JSDOM(html);
-        this.doc.structure.document(() => {
-            this.processNode(dom.window.document.body);
-        });
-
-        return this.doc;
     }
 }
 
@@ -106,12 +82,12 @@ app.post('/convert', async (req, res) => {
         const { html } = req.body;
         if (!html) throw new Error('HTML non fornito');
 
-        const generator = new PDFUAGenerator();
-        const doc = await generator.generatePDF(html);
+        const converter = new PDFUAConverter();
+        const pdfDoc = await converter.convertToPDFUA(html);
         
         res.contentType('application/pdf');
-        doc.pipe(res);
-        doc.end();
+        pdfDoc.pipe(res);
+        pdfDoc.end();
 
     } catch (error) {
         console.error('Errore conversione PDF/UA:', error);
