@@ -1,7 +1,6 @@
 {
   "name": "html-to-pdfua",
   "version": "1.0.0",
-  "description": "Convertitore HTML in PDF/UA accessibile",
   "main": "app.js",
   "scripts": {
     "start": "node app.js"
@@ -9,6 +8,10 @@
   "dependencies": {
     "express": "^4.17.1",
     "pdfkit": "^0.13.0",
-    "jsdom": "^16.5.0"
+    "jsdom": "^16.5.0",
+    "path": "^0.12.7"
+  },
+  "engines": {
+    "node": ">=14.0.0"
   }
 }
