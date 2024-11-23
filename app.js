@@ -3,6 +3,7 @@ const PDFDocument = require('pdfkit');
 const { JSDOM } = require('jsdom');
 const { HtmlValidate } = require('html-validate');
 const path = require('path');
+const MatterhornValidator = require('./matterhorn-validator');
 
 // Configurazione ambiente JSDOM
 const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>');
@@ -84,13 +85,22 @@ class PDFUAGenerator {
 
 app.post('/convert', async (req, res) => {
     try {
-        console.log('Ricevuta richiesta di conversione');
         const { html } = req.body;
-        
         if (!html) {
             throw new Error('HTML non fornito');
         }
 
+        // Prima valida con Matterhorn
+        const validationResult = await MatterhornValidator.validateDocument(html);
+        
+        if (!validationResult.isValid) {
+            return res.status(400).json({
+                error: 'Documento non conforme a PDF/UA',
+                validationResults: validationResult.results
+            });
+        }
+
+        // Se la validazione passa, procedi con la conversione
         const generator = new PDFUAGenerator();
         const doc = await generator.generatePDFUA(html);
         
@@ -99,11 +109,10 @@ app.post('/convert', async (req, res) => {
         doc.end();
 
     } catch (error) {
-        console.error('Stack trace completo:', error.stack);
+        console.error('Errore:', error);
         res.status(500).json({
             error: error.message,
-            stack: error.stack,
-            details: 'Errore nella generazione del PDF/UA'
+            details: 'Errore nella generazione o validazione del PDF/UA'
         });
     }
 });
