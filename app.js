@@ -1,99 +1,164 @@
 const express = require('express');
-const pdfMake = require('pdfmake');
-const htmlToPdfMake = require('html-to-pdfmake');
+const PDFDocument = require('pdfkit');
 const { JSDOM } = require('jsdom');
+const fetch = require('node-fetch');
+const FormData = require('form-data');
 const axeCore = require('axe-core');
 const path = require('path');
+
+class PDFUAValidator {
+    static async validateWithVeraPDF(pdfBuffer) {
+        const formData = new FormData();
+        formData.append('file', pdfBuffer, {
+            filename: 'document.pdf',
+            contentType: 'application/pdf'
+        });
+
+        const response = await fetch('https://verapdf.org/api/validate', {
+            method: 'POST',
+            body: formData
+        });
+
+        if (!response.ok) {
+            throw new Error('Errore durante la validazione PDF/UA');
+        }
+
+        const validationResult = await response.json();
+        
+        // Verifica conformità PDF/UA
+        if (!validationResult.compliant) {
+            throw new Error(`PDF non conforme a PDF/UA: ${JSON.stringify(validationResult.details)}`);
+        }
+
+        return validationResult;
+    }
+
+    static async validateHTML(html) {
+        const dom = new JSDOM(html);
+        const results = await axeCore.run(dom.window.document);
+        
+        if (results.violations.length > 0) {
+            throw new Error(`Violazioni accessibilità HTML: ${JSON.stringify(results.violations)}`);
+        }
+        
+        return true;
+    }
+}
+
+class PDFUAGenerator {
+    constructor() {
+        this.doc = new PDFDocument({
+            tagged: true,
+            lang: 'it-IT',
+            displayTitle: true,
+            pdfVersion: '1.7'
+        });
+
+        // Imposta metadati PDF/UA
+        this.doc.info['PDF/UA-1'] = 'Compliant';
+        this.doc.info.Title = 'PDF/UA Document';
+        this.doc.info.Creator = 'HTML to PDF/UA Converter';
+        this.doc.info.Language = 'it-IT';
+    }
+
+    async generatePDF(html) {
+        // Valida HTML prima della conversione
+        await PDFUAValidator.validateHTML(html);
+
+        const dom = new JSDOM(html);
+        await this.processNode(dom.window.document.body);
+
+        // Raccogli il buffer del PDF
+        const chunks = [];
+        this.doc.on('data', chunk => chunks.push(chunk));
+        
+        return new Promise((resolve, reject) => {
+            this.doc.on('end', async () => {
+                const pdfBuffer = Buffer.concat(chunks);
+                
+                try {
+                    // Valida il PDF generato con veraPDF
+                    const validationResult = await PDFUAValidator.validateWithVeraPDF(pdfBuffer);
+                    resolve({
+                        pdf: pdfBuffer,
+                        validation: validationResult
+                    });
+                } catch (error) {
+                    reject(error);
+                }
+            });
+            
+            this.doc.end();
+        });
+    }
+
+    async processNode(node) {
+        if (node.nodeType === 3) { // Text node
+            this.doc.text(node.textContent.trim());
+            return;
+        }
+
+        const tagName = node.nodeName.toLowerCase();
+        
+        switch(tagName) {
+            case 'h1':
+                this.doc.structure.heading(1, async () => {
+                    for (const child of node.childNodes) {
+                        await this.processNode(child);
+                    }
+                });
+                break;
+            
+            case 'p':
+                this.doc.structure.paragraph(async () => {
+                    for (const child of node.childNodes) {
+                        await this.processNode(child);
+                    }
+                });
+                break;
+
+            case 'ul':
+                this.doc.structure.list(async () => {
+                    for (const child of node.childNodes) {
+                        if (child.nodeName.toLowerCase() === 'li') {
+                            this.doc.structure.listItem(async () => {
+                                await this.processNode(child);
+                            });
+                        }
+                    }
+                });
+                break;
+
+            default:
+                for (const child of node.childNodes) {
+                    await this.processNode(child);
+                }
+        }
+    }
+}
 
 const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-class PDFUAConverter {
-    constructor() {
-        // Configurazione fonts per pdfmake
-        const fonts = {
-            Roboto: {
-                normal: 'node_modules/pdfmake/fonts/Roboto/Roboto-Regular.ttf',
-                bold: 'node_modules/pdfmake/fonts/Roboto/Roboto-Medium.ttf',
-                italics: 'node_modules/pdfmake/fonts/Roboto/Roboto-Italic.ttf',
-                bolditalics: 'node_modules/pdfmake/fonts/Roboto/Roboto-MediumItalic.ttf'
-            }
-        };
-        
-        this.printer = new pdfMake(fonts);
-    }
-
-    async validateHTML(html) {
-        const dom = new JSDOM(html);
-        const document = dom.window.document;
-        
-        // Esegui validazione accessibilità
-        const results = await axeCore.run(document);
-        if (results.violations.length > 0) {
-            console.log('Problemi di accessibilità trovati:', results.violations);
-            throw new Error('Il documento non rispetta gli standard di accessibilità');
-        }
-        return true;
-    }
-
-    async convertToPDFUA(html) {
-        try {
-            // Valida HTML
-            await this.validateHTML(html);
-
-            // Converti HTML in formato pdfmake
-            const window = new JSDOM('').window;
-            const documentDefinition = htmlToPdfMake(html, {window});
-
-            // Aggiungi metadati PDF/UA
-            documentDefinition.info = {
-                title: 'Documento PDF/UA Accessibile',
-                author: 'HTML to PDF/UA Converter',
-                subject: 'PDF/UA accessibile',
-                keywords: 'PDF/UA, accessibilità, WCAG 2.1',
-                producer: 'PDFMake con supporto UA',
-                accessibility: true,
-                tagged: true,
-                lang: 'it-IT',
-                pdfUA: '1',
-            };
-
-            // Applica stili per accessibilità
-            documentDefinition.defaultStyle = {
-                font: 'Roboto',
-                fontSize: 12,
-                lineHeight: 1.5
-            };
-
-            // Crea PDF
-            const pdfDoc = this.printer.createPdfKitDocument(documentDefinition);
-            return pdfDoc;
-
-        } catch (error) {
-            console.error('Errore nella conversione:', error);
-            throw error;
-        }
-    }
-}
-
 app.post('/convert', async (req, res) => {
     try {
         const { html } = req.body;
-        if (!html) throw new Error('HTML non fornito');
+        if (!html) {
+            throw new Error('HTML non fornito');
+        }
 
-        const converter = new PDFUAConverter();
-        const pdfDoc = await converter.convertToPDFUA(html);
-        
+        const generator = new PDFUAGenerator();
+        const { pdf, validation } = await generator.generatePDF(html);
+
         res.contentType('application/pdf');
-        pdfDoc.pipe(res);
-        pdfDoc.end();
+        res.send(pdf);
 
     } catch (error) {
-        console.error('Errore conversione PDF/UA:', error);
-        res.status(500).json({ 
+        console.error('Errore nella conversione:', error);
+        res.status(500).json({
             error: error.message,
-            details: 'Errore nella generazione PDF/UA'
+            details: 'Errore nella creazione o validazione del PDF/UA'
         });
     }
 });
@@ -104,5 +169,5 @@ app.get('/', (req, res) => {
 
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
-    console.log(`Server PDF/UA attivo sulla porta ${port}`);
+    console.log(`Server PDF/UA con validazione veraPDF attivo sulla porta ${port}`);
 });
