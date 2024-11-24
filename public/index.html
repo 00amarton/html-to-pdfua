@@ -3,24 +3,69 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HTML to PDF/UA Converter</title>
-    <link rel="stylesheet" href="style.css">
+    <title>HTML to PDF/UA Validator</title>
+    <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
     <div class="container">
-        <h1>Convertilo in PDF/UA</h1>
+        <header>
+            <h1>HTML to PDF/UA Validator</h1>
+            <p class="subtitle">Valida il tuo HTML prima della conversione in PDF/UA</p>
+        </header>
 
-        <!-- Sezione di inserimento HTML -->
-        <textarea id="htmlInput" placeholder="Inserisci il codice HTML qui"></textarea><br>
-        <button onclick="validateHTML()">Valida HTML</button>
+        <main>
+            <section class="input-section">
+                <div class="input-container">
+                    <h2>Inserisci il codice HTML</h2>
+                    <textarea id="html-input" 
+                             placeholder="Incolla qui il tuo codice HTML..."
+                             aria-label="Area di input per il codice HTML"></textarea>
+                    <div class="buttons">
+                        <button id="validate-btn" class="primary-btn">Valida HTML</button>
+                        <button id="clear-btn" class="secondary-btn">Pulisci</button>
+                    </div>
+                </div>
+            </section>
 
-        <!-- Sezione per i suggerimenti -->
-        <div id="suggestions" class="suggestions"></div>
+            <section class="results-section" aria-live="polite">
+                <h2>Risultati della Validazione</h2>
+                <div class="results-container">
+                    <div class="summary-box">
+                        <h3>Riepilogo</h3>
+                        <div id="summary-content">
+                            <!-- Popolato via JavaScript -->
+                        </div>
+                    </div>
 
-        <!-- Sezione per il download PDF -->
-        <button id="downloadBtn" onclick="generatePDF()" disabled>Genera PDF/UA</button>
+                    <div class="details-box">
+                        <div class="tab-container">
+                            <button class="tab-btn active" data-tab="struttura">Struttura</button>
+                            <button class="tab-btn" data-tab="accessibilita">Accessibilità</button>
+                            <button class="tab-btn" data-tab="suggerimenti">Suggerimenti</button>
+                        </div>
+
+                        <div class="tab-content">
+                            <div id="struttura" class="tab-panel active">
+                                <!-- Popolato via JavaScript -->
+                            </div>
+                            <div id="accessibilita" class="tab-panel">
+                                <!-- Popolato via JavaScript -->
+                            </div>
+                            <div id="suggerimenti" class="tab-panel">
+                                <!-- Popolato via JavaScript -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <div id="loading" class="loading-overlay" aria-hidden="true">
+            <div class="loader"></div>
+            <p>Validazione in corso...</p>
+        </div>
     </div>
 
-    <script src="script.js"></script>
+    <script src="/js/main.js"></script>
 </body>
 </html>
