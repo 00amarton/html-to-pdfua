@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTML to PDF/UA Converter</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>HTML to PDF/UA Converter</h1>
+            <p>Convert HTML to accessible PDF/UA with Matterhorn Protocol validation</p>
+        </header>
+        
+        <main>
+            <section class="input-section">
+                <h2>Input HTML</h2>
+                <textarea id="html-input" placeholder="Paste your HTML here..."></textarea>
+                <div class="button-group">
+                    <button id="validate-btn" class="primary-btn">Validate HTML</button>
+                    <button id="convert-btn" class="primary-btn">Convert to PDF/UA</button>
+                    <button id="clear-btn" class="secondary-btn">Clear</button>
+                </div>
+            </section>
+
+            <section class="results-section">
+                <h2>Validation Results</h2>
+                <div id="validation-results"></div>
+            </section>
+        </main>
+    </div>
+    <script src="js/main.js"></script>
+</body>
+</html>
