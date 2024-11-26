@@ -1,3 +1,4 @@
+const { JSDOM } = require('jsdom');
 class MatterhornValidator {
   // Sezione 1: Document Tree (1-28)
     static documentTreeValidators = {
@@ -390,24 +391,24 @@ class MatterhornValidator {
         }
     };
 
-    static async validateDocument(html) {
+    async validateDocument(html) {
         const validations = [];
         const dom = new JSDOM(html);
         const doc = dom.window.document;
-
+    
         // Combina tutti i validatori
         const allValidators = {
-            ...this.documentTreeValidators.checkDocumentStructure(doc),
-            ...this.tableValidators.checkTableStructure(doc),
-            ...this.nonTextValidators.checkImages(doc),
-            ...this.navigationValidators.checkLinks(doc),
-            ...this.formValidators.checkForms(doc),
-            ...this.metadataValidators.checkMetadata(doc),
-            ...this.listValidators.checkLists(doc),
-            ...this.noteValidators.checkNotes(doc),
-            ...this.referenceValidators.checkReferences(doc),
-            ...this.mediaValidators.checkMedia(doc),
-            ...this.mathValidators.checkMath(doc)
+            ...MatterhornValidator.documentTreeValidators.checkDocumentStructure(doc),
+            ...MatterhornValidator.tableValidators.checkTableStructure(doc),
+            ...MatterhornValidator.nonTextValidators.checkImages(doc),
+            ...MatterhornValidator.navigationValidators.checkLinks(doc),
+            ...MatterhornValidator.formValidators.checkForms(doc),
+            ...MatterhornValidator.metadataValidators.checkMetadata(doc),
+            ...MatterhornValidator.listValidators.checkLists(doc),
+            ...MatterhornValidator.noteValidators.checkNotes(doc),
+            ...MatterhornValidator.referenceValidators.checkReferences(doc),
+            ...MatterhornValidator.mediaValidators.checkMedia(doc),
+            ...MatterhornValidator.mathValidators.checkMath(doc)
         };
 
         // Esegui tutte le validazioni
