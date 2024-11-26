@@ -1,7 +1,7 @@
-const puppeteer = require('puppeteer');
-const PDFDocument = require('pdfkit-universal');
-const HummusRecipe = require('hummus-recipe');
-const AccessiblePDF = require('accessible-pdf');
+const chromium = require('@sparticuz/chromium');
+const puppeteer = require('puppeteer-core');
+const { PDFDocument } = require('pdf-lib');
+const fontkit = require('@pdf-lib/fontkit');
 const { JSDOM } = require('jsdom');
 const cheerio = require('cheerio');
 const fs = require('fs').promises;
@@ -103,14 +103,12 @@ class PDFUAConverter {
         
         let browser;
         try {
-            // Inizializza Puppeteer con configurazioni ottimizzate
             browser = await puppeteer.launch({
-                headless: true,
-                args: [
-                    '--no-sandbox',
-                    '--disable-setuid-sandbox',
-                    '--font-render-hinting=none'
-                ]
+                args: chromium.args,
+                defaultViewport: chromium.defaultViewport,
+                executablePath: await chromium.executablePath(),
+                headless: chromium.headless,
+                ignoreHTTPSErrors: true
             });
 
             const page = await browser.newPage();
