@@ -1,55 +1,9 @@
-document.getElementById('fix-btn').addEventListener('click', async () => {
-    const htmlInput = document.getElementById('html-input');
-    const html = htmlInput.value.trim();
-    
-    if (!html) {
-        showResult({
-            type: 'error',
-            message: 'Please enter HTML content to fix'
-        });
-        return;
-    }
-
-    showLoading(true);
-    
-    try {
-        const response = await fetch('/fix-html', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ html })
-        });
-
-        if (!response.ok) {
-            throw new Error('Fix request failed');
-        }
-
-        const result = await response.json();
-        htmlInput.value = result.fixedHtml;
-        
-        displayValidationResults(result.validation);
-        
-        showResult({
-            type: 'success',
-            message: 'HTML fixed and validated successfully!'
-        });
-    } catch (error) {
-        console.error('Fix error:', error);
-        showResult({
-            type: 'error',
-            message: 'Error during HTML fix: ' + error.message
-        });
-    } finally {
-        showLoading(false);
-    }
-});
-
 document.addEventListener('DOMContentLoaded', () => {
     const htmlInput = document.getElementById('html-input');
     const validateBtn = document.getElementById('validate-btn');
     const convertBtn = document.getElementById('convert-btn');
     const clearBtn = document.getElementById('clear-btn');
+    const fixBtn = document.getElementById('fix-btn');
     const validationResults = document.getElementById('validation-results');
     const loadingOverlay = document.getElementById('loading');
 
@@ -86,6 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             displayValidationResults(result);
             convertBtn.disabled = !result.isValid;
+            fixBtn.disabled = result.isValid; // Disabilita Fix se HTML è valido
             
         } catch (error) {
             console.error('Validation error:', error);
@@ -94,6 +49,59 @@ document.addEventListener('DOMContentLoaded', () => {
                 message: 'Error during validation: ' + error.message
             });
             convertBtn.disabled = true;
+            fixBtn.disabled = false;
+        } finally {
+            showLoading(false);
+        }
+    });
+
+    fixBtn.addEventListener('click', async () => {
+        const html = htmlInput.value.trim();
+        
+        if (!html) {
+            showResult({
+                type: 'error',
+                message: 'Please enter HTML content to fix'
+            });
+            return;
+        }
+
+        showLoading(true);
+        
+        try {
+            const response = await fetch('/fix-html', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ html })
+            });
+
+            if (!response.ok) {
+                throw new Error('Fix request failed');
+            }
+
+            const result = await response.json();
+            htmlInput.value = result.fixedHtml;
+            
+            displayValidationResults(result.validation);
+            
+            showResult({
+                type: 'success',
+                message: 'HTML fixed and validated successfully!',
+                details: `The HTML has been automatically corrected and validated.`
+            });
+
+            // Aggiorna stati bottoni
+            convertBtn.disabled = !result.validation.isValid;
+            fixBtn.disabled = result.validation.isValid;
+            
+        } catch (error) {
+            console.error('Fix error:', error);
+            showResult({
+                type: 'error',
+                message: 'Error during HTML fix: ' + error.message
+            });
         } finally {
             showLoading(false);
         }
@@ -130,7 +138,8 @@ document.addEventListener('DOMContentLoaded', () => {
             
             showResult({
                 type: 'success',
-                message: 'PDF/UA generated successfully!'
+                message: 'PDF/UA generated successfully!',
+                details: 'The PDF has been generated with full accessibility support.'
             });
             
         } catch (error) {
@@ -149,6 +158,7 @@ document.addEventListener('DOMContentLoaded', () => {
         validationResults.innerHTML = '';
         currentValidation = null;
         convertBtn.disabled = true;
+        fixBtn.disabled = false; // Riabilita Fix dopo clear
     });
 
     function displayValidationResults(result) {
@@ -156,7 +166,12 @@ document.addEventListener('DOMContentLoaded', () => {
             showResult({
                 type: 'success',
                 message: 'HTML is valid and ready for conversion!',
-                details: `Passed ${result.results.passedCount} out of ${result.results.total} checks.`
+                details: `
+                    <div class="validation-summary">
+                        <p>Passed ${result.results.passedCount} out of ${result.results.total} checks.</p>
+                        <p>Your HTML is fully compliant with accessibility standards.</p>
+                    </div>
+                `
             });
         } else {
             const issuesHtml = result.results.failed.map(issue => `
@@ -169,6 +184,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 type: 'warning',
                 message: 'Please fix the following issues:',
                 details: `
+                    <div class="validation-summary">
+                        <p>Failed ${result.results.failedCount} out of ${result.results.total} checks.</p>
+                        <p>Click "Fix HTML" to automatically correct these issues.</p>
+                    </div>
                     <div class="issues-list">
                         ${issuesHtml}
                     </div>

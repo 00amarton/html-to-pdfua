@@ -141,53 +141,6 @@ class HTMLFixer {
                         expectedLevel = currentLevel + 1;
                     });
                 }
-            },
-
-            listStructure: {
-                fixLists: (doc) => {
-                    // Fix unordered lists
-                    doc.querySelectorAll('ul').forEach(ul => {
-                        Array.from(ul.children).forEach(child => {
-                            if (child.tagName.toLowerCase() !== 'li') {
-                                const li = doc.createElement('li');
-                                li.innerHTML = child.outerHTML;
-                                child.parentNode.replaceChild(li, child);
-                            }
-                        });
-                    });
-
-                    // Fix ordered lists
-                    doc.querySelectorAll('ol').forEach(ol => {
-                        Array.from(ol.children).forEach(child => {
-                            if (child.tagName.toLowerCase() !== 'li') {
-                                const li = doc.createElement('li');
-                                li.innerHTML = child.outerHTML;
-                                child.parentNode.replaceChild(li, child);
-                            }
-                        });
-                    });
-                }
-            },
-
-            languageSupport: {
-                fixLanguage: (doc) => {
-                    const html = doc.documentElement;
-                    if (!html.getAttribute('lang')) {
-                        html.setAttribute('lang', 'it');
-                    }
-
-                    // Fix elementi con testo in lingua diversa
-                    const textNodes = this.getAllTextNodes(doc.body);
-                    textNodes.forEach(node => {
-                        const text = node.textContent.trim();
-                        if (text && this.isLikelyForeignText(text)) {
-                            const span = doc.createElement('span');
-                            span.setAttribute('lang', this.detectLanguage(text));
-                            span.textContent = text;
-                            node.parentNode.replaceChild(span, node);
-                        }
-                    });
-                }
             }
         };
     }
@@ -197,7 +150,7 @@ class HTMLFixer {
             const dom = new JSDOM(html);
             const doc = dom.window.document;
 
-            // Applica tutte le correzioni
+            // Applica le correzioni
             this.fixes.documentStructure.fixMissingElements(doc);
             this.fixes.documentStructure.fixMainContent(doc);
             this.fixes.accessibility.fixMissingAltText(doc);
@@ -205,8 +158,6 @@ class HTMLFixer {
             this.fixes.tableStructure.fixTables(doc);
             this.fixes.metadata.fixMetadata(doc);
             this.fixes.headingStructure.fixHeadings(doc);
-            this.fixes.listStructure.fixLists(doc);
-            this.fixes.languageSupport.fixLanguage(doc);
 
             // Pulisci e formatta l'HTML
             const $ = cheerio.load(dom.serialize(), { xmlMode: true });
@@ -224,34 +175,6 @@ class HTMLFixer {
             .replace(/(<\/?[^>]+>)/g, '$1\n')
             .replace(/\n\s*\n/g, '\n')
             .trim();
-    }
-
-    getAllTextNodes(node) {
-        const textNodes = [];
-        const walker = node.ownerDocument.createTreeWalker(
-            node,
-            NodeFilter.SHOW_TEXT,
-            null,
-            false
-        );
-
-        let currentNode;
-        while (currentNode = walker.nextNode()) {
-            textNodes.push(currentNode);
-        }
-        return textNodes;
-    }
-
-    isLikelyForeignText(text) {
-        // Implementa la logica per rilevare testo in lingua straniera
-        // Questa è una versione semplificata
-        return false;
-    }
-
-    detectLanguage(text) {
-        // Implementa la logica per rilevare la lingua
-        // Questa è una versione semplificata
-        return 'en';
     }
 }
 
