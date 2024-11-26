@@ -9,11 +9,12 @@
   "scripts": {
     "start": "node app.js",
     "dev": "nodemon app.js",
-    "build": "echo 'No build required'"
+    "build": "echo 'No build required'",
+    "postinstall": "node ./postinstall.js"
   },
   "dependencies": {
     "express": "^4.18.2",
-    "puppeteer-core": "^19.7.0",
+    "puppeteer-core": "^10.1.0",
     "cheerio": "^1.0.0-rc.12",
     "xml2js": "^0.5.0",
     "pdf-lib": "^1.17.1",
@@ -23,9 +24,12 @@
     "jsdom": "^22.1.0",
     "node-html-parser": "^6.1.11",
     "chrome-aws-lambda": "^10.1.0",
-    "@sparticuz/chromium": "^119.0.0"
+    "@sparticuz/chromium-min": "^119.0.2"
   },
   "devDependencies": {
     "nodemon": "^2.0.21"
+  },
+  "overrides": {
+    "puppeteer-core": "^10.1.0"
   }
 }

@@ -1,4 +1,4 @@
-const chromium = require('@sparticuz/chromium');
+const chromium = require('@sparticuz/chromium-min');
 const puppeteer = require('puppeteer-core');
 const { PDFDocument } = require('pdf-lib');
 const fontkit = require('@pdf-lib/fontkit');
@@ -103,11 +103,13 @@ class PDFUAConverter {
         
         let browser;
         try {
+            const executablePath = process.env.CHROME_BIN || await chromium.executablePath();
+            
             browser = await puppeteer.launch({
                 args: chromium.args,
                 defaultViewport: chromium.defaultViewport,
-                executablePath: await chromium.executablePath(),
-                headless: chromium.headless,
+                executablePath,
+                headless: true,
                 ignoreHTTPSErrors: true
             });
 
@@ -139,6 +141,9 @@ class PDFUAConverter {
 
             return pdfBuffer;
 
+        } catch (error) {
+            console.error('Errore durante la generazione del PDF:', error);
+            throw error;
         } finally {
             if (browser) await browser.close();
         }

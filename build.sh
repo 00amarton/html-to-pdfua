@@ -8,7 +8,7 @@ set -e
 
 # Install node dependencies
 echo "Installing Node.js dependencies..."
-npm install --production
+npm install --production --legacy-peer-deps
 
 # Create required directories
 echo "Setting up directories..."
