@@ -1,37 +1,32 @@
 #!/usr/bin/env bash
 
-# Debug: mostra i comandi mentre vengono eseguiti
+# Debug mode
 set -x
 
-# Assicurati che il fail avvenga se qualche comando fallisce
+# Fail on error
 set -e
 
-# Installa le dipendenze
-echo "Installing dependencies..."
+# Install system dependencies for PDF processing
+echo "Installing system dependencies..."
+apt-get update && apt-get install -y \
+    build-essential \
+    libcairo2-dev \
+    libpango1.0-dev \
+    libjpeg-dev \
+    libgif-dev \
+    librsvg2-dev \
+    libpixman-1-dev
+
+# Install node dependencies
+echo "Installing Node.js dependencies..."
 npm install
 
-# Crea directory public se non esiste
-echo "Creating public directory..."
-mkdir -p public
+# Create required directories
+echo "Setting up directories..."
+mkdir -p public/temp
 
-# Copia i file statici se esistono
-if [ -d "src/public" ]; then
-  echo "Copying static files..."
-  cp -r src/public/* public/
-fi
-
-# Verifica che le dipendenze siano state installate
-echo "Verifying dependencies..."
-if [ ! -d "node_modules" ]; then
-  echo "node_modules not found, retrying npm install..."
-  rm -rf package-lock.json
-  npm install
-fi
-
-# Verifica che express sia installato
-if [ ! -d "node_modules/express" ]; then
-  echo "Express not found, installing specifically..."
-  npm install express
-fi
+# Set permissions
+echo "Setting permissions..."
+chmod -R 755 public
 
 echo "Build completed successfully"
