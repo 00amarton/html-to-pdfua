@@ -1,3 +1,50 @@
+document.getElementById('fix-btn').addEventListener('click', async () => {
+    const htmlInput = document.getElementById('html-input');
+    const html = htmlInput.value.trim();
+    
+    if (!html) {
+        showResult({
+            type: 'error',
+            message: 'Please enter HTML content to fix'
+        });
+        return;
+    }
+
+    showLoading(true);
+    
+    try {
+        const response = await fetch('/fix-html', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ html })
+        });
+
+        if (!response.ok) {
+            throw new Error('Fix request failed');
+        }
+
+        const result = await response.json();
+        htmlInput.value = result.fixedHtml;
+        
+        displayValidationResults(result.validation);
+        
+        showResult({
+            type: 'success',
+            message: 'HTML fixed and validated successfully!'
+        });
+    } catch (error) {
+        console.error('Fix error:', error);
+        showResult({
+            type: 'error',
+            message: 'Error during HTML fix: ' + error.message
+        });
+    } finally {
+        showLoading(false);
+    }
+});
+
 document.addEventListener('DOMContentLoaded', () => {
     const htmlInput = document.getElementById('html-input');
     const validateBtn = document.getElementById('validate-btn');

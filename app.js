@@ -4,6 +4,7 @@ const helmet = require('helmet');
 const cors = require('cors');
 const MatterhornValidator = require('./matterhorn-validator');
 const { PDFUAConverter } = require('./pdf-converter');
+const { HTMLFixer } = require('./html-fixer');
 
 const app = express();
 
@@ -73,4 +74,31 @@ app.post('/convert', async (req, res) => {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+});
+
+app.post('/fix-html', async (req, res) => {
+  try {
+      const { html } = req.body;
+      if (!html) {
+          return res.status(400).json({ error: 'HTML content is required' });
+      }
+
+      const fixer = new HTMLFixer();
+      const fixedHtml = await fixer.fixHTML(html);
+
+      // Valida l'HTML corretto
+      const validator = new MatterhornValidator();
+      const validationResults = await validator.validateDocument(fixedHtml);
+
+      res.json({
+          fixedHtml,
+          validation: validationResults
+      });
+  } catch (error) {
+      console.error('Fix HTML error:', error);
+      res.status(500).json({ 
+          error: 'HTML fix failed', 
+          details: error.message 
+      });
+  }
 });
