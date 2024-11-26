@@ -1,10 +1,11 @@
 :root {
     --primary-color: #2563eb;
-    --surface-color: #ffffff;
+    --secondary-color: #475569;
+    --success-color: #22c55e;
+    --error-color: #ef4444;
+    --warning-color: #f59e0b;
     --background-color: #f8fafc;
-    --text-color: #1e293b;
-    --error-color: #dc2626;
-    --success-color: #16a34a;
+    --surface-color: #ffffff;
 }
 
 * {
@@ -16,8 +17,8 @@
 body {
     font-family: system-ui, -apple-system, sans-serif;
     line-height: 1.5;
-    color: var(--text-color);
     background-color: var(--background-color);
+    color: #1e293b;
 }
 
 .container {
@@ -37,29 +38,40 @@ h1 {
     margin-bottom: 0.5rem;
 }
 
-.input-section, .results-section {
+h2 {
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+    color: var(--secondary-color);
+}
+
+.input-section {
     background: var(--surface-color);
-    padding: 1.5rem;
+    padding: 2rem;
     border-radius: 8px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     margin-bottom: 2rem;
 }
 
+.editor-container {
+    margin-bottom: 1rem;
+}
+
 #html-input {
     width: 100%;
-    height: 200px;
+    min-height: 300px;
     padding: 1rem;
-    margin: 1rem 0;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', monospace;
+    font-size: 14px;
+    line-height: 1.6;
     border: 1px solid #e2e8f0;
     border-radius: 4px;
-    font-family: monospace;
-    font-size: 0.9rem;
     resize: vertical;
 }
 
 .button-group {
     display: flex;
     gap: 1rem;
+    flex-wrap: wrap;
 }
 
 .primary-btn, .secondary-btn {
@@ -68,7 +80,7 @@ h1 {
     border-radius: 4px;
     font-weight: 500;
     cursor: pointer;
-    transition: background-color 0.2s;
+    transition: all 0.2s;
 }
 
 .primary-btn {
@@ -77,45 +89,110 @@ h1 {
 }
 
 .primary-btn:hover {
-    opacity: 0.9;
+    background-color: #1d4ed8;
+}
+
+.primary-btn:disabled {
+    background-color: #94a3b8;
+    cursor: not-allowed;
 }
 
 .secondary-btn {
     background-color: #e2e8f0;
-    color: var(--text-color);
+    color: var(--secondary-color);
 }
 
 .secondary-btn:hover {
     background-color: #cbd5e1;
 }
 
-#validation-results {
+.results-section {
+    background: var(--surface-color);
+    padding: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    position: relative;
+}
+
+.results-container {
+    min-height: 100px;
+}
+
+.validation-result {
+    padding: 1rem;
+    border-radius: 4px;
+    margin-bottom: 1rem;
+}
+
+.validation-success {
+    background-color: #f0fdf4;
+    border-left: 4px solid var(--success-color);
+}
+
+.validation-error {
+    background-color: #fef2f2;
+    border-left: 4px solid var(--error-color);
+}
+
+.validation-warning {
+    background-color: #fffbeb;
+    border-left: 4px solid var(--warning-color);
+}
+
+.issues-list {
     margin-top: 1rem;
 }
 
-.result-item {
-    padding: 1rem;
-    margin-bottom: 1rem;
+.issue-item {
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
     border-radius: 4px;
-    border-left: 4px solid;
+    background-color: #f8fafc;
 }
 
-.result-item.error {
-    background-color: #fef2f2;
-    border-left-color: var(--error-color);
+.loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(255, 255, 255, 0.9);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
 }
 
-.result-item.success {
-    background-color: #f0fdf4;
-    border-left-color: var(--success-color);
+.loading-overlay.hidden {
+    display: none;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid var(--primary-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 1rem;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
 }
 
 @media (max-width: 768px) {
     .container {
         padding: 1rem;
     }
-
+    
     .button-group {
         flex-direction: column;
+    }
+    
+    .primary-btn, .secondary-btn {
+        width: 100%;
     }
 }

@@ -4,113 +4,154 @@ document.addEventListener('DOMContentLoaded', () => {
     const convertBtn = document.getElementById('convert-btn');
     const clearBtn = document.getElementById('clear-btn');
     const validationResults = document.getElementById('validation-results');
+    const loadingOverlay = document.getElementById('loading');
 
-    // Disabilita inizialmente il pulsante di conversione
-    convertBtn.disabled = true;
+    let currentValidation = null;
 
-    // Funzione per validare l'HTML
-    async function validateHTML(html) {
-        try {
-            const response = await fetch('/api/validate', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ html })
-            });
-
-            if (!response.ok) {
-                throw new Error('Errore nella validazione');
-            }
-
-            return await response.json();
-        } catch (error) {
-            console.error('Errore:', error);
-            throw error;
-        }
-    }
-
-    // Funzione per convertire in PDF/UA
-    async function convertToPDF(html) {
-        try {
-            const response = await fetch('/api/convert', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ html })
-            });
-
-            if (!response.ok) {
-                throw new Error('Errore nella conversione');
-            }
-
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'document.pdf';
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-            a.remove();
-        } catch (error) {
-            console.error('Errore:', error);
-            showResult('Errore durante la conversione', 'error');
-        }
-    }
-
-    // Funzione per mostrare i risultati
-    function showResult(message, type = 'success') {
-        const resultDiv = document.createElement('div');
-        resultDiv.className = `result-item ${type}`;
-        resultDiv.textContent = message;
-        validationResults.innerHTML = '';
-        validationResults.appendChild(resultDiv);
-    }
-
-    // Event Listeners
     validateBtn.addEventListener('click', async () => {
         const html = htmlInput.value.trim();
+        
         if (!html) {
-            showResult('Inserisci il codice HTML da validare', 'error');
+            showResult({
+                type: 'error',
+                message: 'Please enter HTML content to validate'
+            });
             return;
         }
 
+        showLoading(true);
+        
         try {
-            validateBtn.disabled = true;
-            const results = await validateHTML(html);
-            
-            if (results.isValid) {
-                showResult('HTML valido! Puoi procedere con la conversione');
-                convertBtn.disabled = false;
-            } else {
-                showResult(`Trovati ${results.errors.length} errori di validazione`, 'error');
-                convertBtn.disabled = true;
+            const response = await fetch('/validate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ html })
+            });
+
+            if (!response.ok) {
+                throw new Error('Validation request failed');
             }
+
+            const result = await response.json();
+            currentValidation = result;
+            
+            displayValidationResults(result);
+            convertBtn.disabled = !result.isValid;
+            
         } catch (error) {
-            showResult('Errore durante la validazione', 'error');
+            console.error('Validation error:', error);
+            showResult({
+                type: 'error',
+                message: 'Error during validation: ' + error.message
+            });
+            convertBtn.disabled = true;
         } finally {
-            validateBtn.disabled = false;
+            showLoading(false);
         }
     });
 
     convertBtn.addEventListener('click', async () => {
-        const html = htmlInput.value.trim();
-        if (!html) return;
+        if (!currentValidation?.isValid) {
+            showResult({
+                type: 'warning',
+                message: 'Please validate HTML first'
+            });
+            return;
+        }
 
+        showLoading(true);
+        
         try {
-            convertBtn.disabled = true;
-            await convertToPDF(html);
-            showResult('PDF generato con successo!');
+            const response = await fetch('/convert', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ 
+                    html: htmlInput.value.trim() 
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error('Conversion request failed');
+            }
+
+            const blob = await response.blob();
+            downloadPDF(blob);
+            
+            showResult({
+                type: 'success',
+                message: 'PDF/UA generated successfully!'
+            });
+            
+        } catch (error) {
+            console.error('Conversion error:', error);
+            showResult({
+                type: 'error',
+                message: 'Error during conversion: ' + error.message
+            });
         } finally {
-            convertBtn.disabled = false;
+            showLoading(false);
         }
     });
 
     clearBtn.addEventListener('click', () => {
         htmlInput.value = '';
         validationResults.innerHTML = '';
+        currentValidation = null;
         convertBtn.disabled = true;
     });
+
+    function displayValidationResults(result) {
+        if (result.isValid) {
+            showResult({
+                type: 'success',
+                message: 'HTML is valid and ready for conversion!',
+                details: `Passed ${result.results.passedCount} out of ${result.results.total} checks.`
+            });
+        } else {
+            const issuesHtml = result.results.failed.map(issue => `
+                <div class="issue-item">
+                    <strong>${issue.id}:</strong> ${issue.description}
+                </div>
+            `).join('');
+
+            showResult({
+                type: 'warning',
+                message: 'Please fix the following issues:',
+                details: `
+                    <div class="issues-list">
+                        ${issuesHtml}
+                    </div>
+                `
+            });
+        }
+    }
+
+    function showResult({ type, message, details = '' }) {
+        validationResults.innerHTML = `
+            <div class="validation-result validation-${type}">
+                <h3>${message}</h3>
+                ${details}
+            </div>
+        `;
+    }
+
+    function showLoading(show) {
+        loadingOverlay.classList.toggle('hidden', !show);
+    }
+
+    function downloadPDF(blob) {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = 'document.pdf';
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        a.remove();
+    }
 });

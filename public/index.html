@@ -16,17 +16,23 @@
         <main>
             <section class="input-section">
                 <h2>Input HTML</h2>
-                <textarea id="html-input" placeholder="Paste your HTML here..."></textarea>
+                <div class="editor-container">
+                    <textarea id="html-input" spellcheck="false" placeholder="Paste your HTML here..."></textarea>
+                </div>
                 <div class="button-group">
                     <button id="validate-btn" class="primary-btn">Validate HTML</button>
-                    <button id="convert-btn" class="primary-btn">Convert to PDF/UA</button>
+                    <button id="convert-btn" class="primary-btn" disabled>Convert to PDF/UA</button>
                     <button id="clear-btn" class="secondary-btn">Clear</button>
                 </div>
             </section>
 
             <section class="results-section">
                 <h2>Validation Results</h2>
-                <div id="validation-results"></div>
+                <div id="validation-results" class="results-container"></div>
+                <div id="loading" class="loading-overlay hidden">
+                    <div class="spinner"></div>
+                    <p>Processing...</p>
+                </div>
             </section>
         </main>
     </div>
